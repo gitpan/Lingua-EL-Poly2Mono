@@ -1,6 +1,3 @@
-
-# %%%%%%%% Scroll to the bottom to see the POD documentation %%%%%%% #
-
 package Lingua::EL::Poly2Mono;
 require Exporter;
 
@@ -25,7 +22,7 @@ use vars qw/
 	%direm
 /;
 
-  $VERSION   = 0.01;
+  $VERSION   = 0.02;
   @ISA       = 'Exporter';
 # @ISNTA     = 'Deporter';
   @EXPORT_OK = 'poly2mono';
@@ -492,7 +489,7 @@ sub poly2mono {
 sub _poly2mono { # the guts
 	my($orig) = $_[0];
 	my($newstring,$thischar);
-	my($fsyl,$fphon,$lsyl,$prevvowel);
+	my($fsyl,$fphon,$lsyl,$prevvowel); # first syllable, first phoneme, last syllable, previous vowel
 	my(@lexis);
 	while($orig =~ s/$C//) {
 		$thischar = $&;
@@ -536,6 +533,8 @@ sub _poly2mono { # the guts
 			   (!$fsyl or !$lsyl)) {
 				$newstring .=($remove{$thischar} ||
 				$thischar) . ' ΄';
+
+			# Accentuation exceptions are dealt with here:
 			}elsif ($thischar eq 'ῦ' and
 			   join('',@lexis) =~ /^(?:Π|π)ο$/ and 
 			   $orig !~ /^$gramma/){
@@ -546,6 +545,22 @@ sub _poly2mono { # the guts
 			   $orig =~ /^ς(?!$gramma)/) {
 				$newstring .= 'ώ';
 			}
+			elsif ($thischar =~ /^(?:ἢ|ἤ)/ and
+			   !@lexis and
+			   $orig =~ /^(?!$gramma)/) {
+				$newstring .= 'ή';
+			}
+			elsif ($thischar =~ /^(?:ὰ|ά)/ and
+			   join('',@lexis) =~ /(?:Γ|γ|Π|π)ι$/ and
+			   $orig =~ /^(?!$gramma)/) {
+				$newstring .= 'α';
+			}
+			elsif ($thischar =~ /^(?:ὸ|ό)/ and
+			   join('',@lexis) =~ /(?:Π|π)ι$/ and
+			   $orig =~ /^(?!$gramma)/) {
+				$newstring .= 'ο';
+			}
+
 			elsif (($fsyl and $lsyl) or ($prevvowel =~
 			   /$accent/)){
 				$newstring .= $remove{$thischar} ||
@@ -568,7 +583,33 @@ sub _poly2mono { # the guts
 
 __END__
 
+I was going to put this in the man page, but I decided against it:
 
+ # raw utf8 bytes:
+ $mono = poly2mono
+         "\xce\xa4\xce\xbf\xe1\xbd\x90\xce\xbb\xe1\xbd\xb1\xcf\x87\xce"
+       . "\xb9\xcf\x83\xcf\x84\xce\xbf\xce\xbd \xce\xb8\xe1\xbd\xb3\xce"
+       . "\xbb\xcf\x89 \xce\xbd\xe1\xbc\x84\xcf\x83\xcf\x84\xce\xb1\xce"
+       . "\xb9 \xce\xba\xce\xb1\xce\xbb\xe1\xbd\xb1!";
+ # $mono now contains
+ #       "\xce\xa4\xce\xbf\xcf\x85\xce\xbb\xce\xac\xcf\x87\xce\xb9\xcf"
+ #     . "\x83\xcf\x84\xce\xbf\xce\xbd \xce\xb8\xce\xad\xce\xbb\xcf\x89"
+ #     . " \xce\xbd\xce\xb1 \xce\x84\xcf\x83\xcf\x84\xce\xb1\xce\xb9 "
+ #     . "\xce\xba\xce\xb1\xce\xbb\xce\xac!"
+ 
+ # OR
+ 
+ # Unicode string:
+ $mono = poly2mono
+         "\x{03a4}\x{03bf}\x{1f50}\x{03bb}\x{1f71}\x{03c7}\x{03b9}"
+      .  "\x{03c3}\x{03c4}\x{03bf}\x{03bd} \x{03b8}\x{1f73}\x{03bb}"
+      .  "\x{03c9} \x{03bd}\x{1f04}\x{03c3}\x{03c4}\x{03b1}\x{03b9} "
+      .  "\x{03ba}\x{03b1}\x{03bb}\x{1f71}!"
+ # $mono now contains
+ #       "\x{03a4}\x{03bf}\x{03c5}\x{03bb}\x{03ac}\x{03c7}\x{03b9}"
+ #     . "\x{03c3}\x{03c4}\x{03bf}\x{03bd} \x{03b8}\x{03ad}\x{03bb}"
+ #     . "\x{03c9} \x{03bd}\x{03b1} \x{0384}\x{03c3}\x{03c4}\x{03b1}"
+ #     . "\x{03b9} \x{03ba}\x{03b1}\x{03bb}\x{03ac}!"
 
 
 
@@ -581,8 +622,8 @@ Lingua::EL::Poly2Mono - Convert polytonic Greek to monotonic
 
 =head1 VERSION
 
-This document describes version .01 of
-S<Lingua::EL::Poly2Mono,> released in April 2006.
+This document describes version .02 of
+S<Lingua::EL::Poly2Mono,> released in October of 2006.
 
 =head1 SYNOPSIS
 
@@ -606,16 +647,16 @@ be in the same format.
 To make this clearer:
 
  # Unicode string:
- $mono = poly2mono "\x{1f22}"; # eta with psili and varia
+ $mono = poly2mono "\x{1f21}"; # eta with dasia
  # $mono now contains "\x{03b7}" (unaccented eta)
 
- # raw Unicode bytes
- $mono = poly2mono "\xe1\xbc\xa2";
+ # raw Unicode bytes:
+ $mono = poly2mono "\xe1\xbc\xa1";
  # $mono now contains "\xce\xb7"
 
 =head1 COMPATIBILITY
 
-This module has been tested with Perl 5.002_01
+This module has only been tested with Perl 5.002_01
 and 5.8.6 (in 5.002_01 you need parentheses around the argument or
 a
 S<C<use subs 'poly2mono'>> statement). It uses the Encode module's
@@ -624,16 +665,19 @@ between the two types of input. If this function (or the Encode module)
 is not available, the
 input will be treated as bytes.
 
+=head1 VERSION HISTORY
+
+0.02 (October 2006, this version)
+Accentuation was corrected for the words ή, για, πιο and πια.
+
+0.01 (April 2006)
+The first version
+
 =head1 AUTHOR
 
 Father Chrysostomos
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2006 Father Chrysostomos, all rights reserved.
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+<sprout (at]cpan.org>
 
 =cut
+
 
